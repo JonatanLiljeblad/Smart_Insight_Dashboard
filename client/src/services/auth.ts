@@ -1,16 +1,21 @@
 import { apiFetch } from "@/lib/api";
-import type { User, Token } from "@/types/user";
+import type { User } from "@/types/user";
+import type { Token, LoginPayload, RegisterPayload } from "@/types/auth";
 
-export async function signup(username: string, email: string, password: string): Promise<User> {
-  return apiFetch<User>("/api/auth/signup", {
+export function register(payload: RegisterPayload): Promise<User> {
+  return apiFetch<User>("/api/auth/register", {
     method: "POST",
-    body: JSON.stringify({ username, email, password }),
+    body: JSON.stringify(payload),
   });
 }
 
-export async function login(email: string, password: string): Promise<Token> {
+export function login(payload: LoginPayload): Promise<Token> {
   return apiFetch<Token>("/api/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify(payload),
   });
+}
+
+export function getCurrentUser(): Promise<User> {
+  return apiFetch<User>("/api/auth/me");
 }
