@@ -19,8 +19,8 @@ seed:
 
 # ── Testing ────────────────────────────────────────────
 test:
-	cd server && pytest -q
+	docker compose exec server pytest -q
 
 # ── Linting ────────────────────────────────────────────
 lint:
-	cd server && ruff check .
+	docker compose exec server ruff check .
