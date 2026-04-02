@@ -29,7 +29,9 @@ build/
 
 # dotenv
 .env
-.env.* 
+.env.local
+.env.*.local
+!.env.example
 
 # Node / frontend
 node_modules/
@@ -40,5 +42,4 @@ package-lock.json
 out/
 
 # Docker
-*.docker
 docker-compose.override.yml

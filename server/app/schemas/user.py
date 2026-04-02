@@ -1,17 +1,17 @@
 from pydantic import BaseModel
 
-# For signup
+
 class UserCreate(BaseModel):
     username: str
     email: str
     password: str
 
-# For login (JSON)
+
 class UserLogin(BaseModel):
     email: str
     password: str
 
-# For output (omit password)
+
 class UserOut(BaseModel):
     id: int
     username: str
@@ -19,3 +19,8 @@ class UserOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"

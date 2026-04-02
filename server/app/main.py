@@ -1,21 +1,24 @@
-# app/main.py
 from fastapi import FastAPI
-from .routers import auth, users, data
-from . import models, database
+from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Smart Insight Dashboard API", version="0.0.1")
+from app.core.config import settings
 
-@app.on_event("startup")
-def on_startup():
-    models.Base.metadata.create_all(bind=database.engine)
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version="0.1.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
 
-# Root/Health endpoint
-@app.get("/")
-def root():
-    """Health check endpoint"""
-    return {"status": "healthy", "message": "Smart Insight Dashboard API is running"}
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Include routers
-app.include_router(auth.router, prefix="/auth", tags=["Auth"])
-app.include_router(users.router, prefix="/users", tags=["Users"])
-app.include_router(data.router, prefix="/data", tags=["Data"])
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}

@@ -1,165 +1,156 @@
-# Smart Insights Dashboard  ![Build Status](https://github.com/JonatanLil/Proj_Blue/actions/workflows/ci.yml/badge.svg)
+# Smart Insights Dashboard v2
 
-![License](https://img.shields.io/github/license/JonatanLil/Proj_Blue)
-![Tech Stack](https://img.shields.io/badge/stack-FastAPI%20|%20Next.js%20|%20PostgreSQL%20|%20Scikit--learn-blue)
-![Deploy](https://img.shields.io/badge/deploy-Vercel%20|%20Heroku-green)
-![Code Style](https://img.shields.io/badge/code%20style-black-000000)
-![Code Style](https://img.shields.io/badge/code%20style-prettier-ff69b4)
+A full-stack analytics platform built with **FastAPI**, **Next.js**, **PostgreSQL**, and **Redis** — containerized with Docker Compose.
 
-📊 **Smart Insights Dashboard** is a full-stack web app that combines interactive data visualization with machine learning insights.  
-Built to explore real sports datasets (Golf), it predicts player performance and recommends personalized insights — all in a modern, responsive dashboard.  
-
-This project showcases **full-stack engineering + ML integration + cloud deployment** — designed for learning and for portfolio use in data-driven software internships.  
+> 📌 **Status:** Phase 1 — Foundation (services running, health check live)
 
 ---
 
-## 🚀 Features
+## Tech Stack
 
-- **User Authentication**  
-  - Sign up / log in (JWT-based)  
-  - Save favorite players, teams, or drills  
-  - Personalized dashboard  
-
-- **Interactive Dashboard**  
-  - Explore sports data with filters (season, player, team)  
-  - Charts with tooltips & trends over time (Plotly.js/Recharts)  
-  - Overview cards for key stats  
-
-- **Machine Learning Insights**  
-  - Predictive Model: Forecast player performance (e.g., next-game points)  
-  - Recommendation System: Suggest players or drills based on user history  
-  - API-powered, real-time updates  
-
-- **Full-Stack Tech**  
-  - **Frontend**: Next.js + TailwindCSS + Plotly.js/Recharts  
-  - **Backend**: FastAPI (Python) with REST APIs  
-  - **Database**: PostgreSQL (users, stats, predictions, favorites)  
-  - **ML**: Scikit-learn, Pandas, NumPy  
-  - **Deployment**: Vercel (frontend), Heroku/AWS (backend + DB), Docker  
+| Layer     | Technology                  |
+|-----------|-----------------------------|
+| Frontend  | Next.js 15, TypeScript, Tailwind CSS |
+| Backend   | FastAPI, Python 3.12        |
+| Database  | PostgreSQL 16               |
+| Cache     | Redis 7                     |
+| Infra     | Docker, Docker Compose      |
 
 ---
 
-## 📂 Project Structure
+## Quick Start
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) and Docker Compose
+
+### 1. Clone and configure
+
+```bash
+git clone https://github.com/JonatanLiljeblad/Smart_Insight_Dashboard.git
+cd Smart_Insight_Dashboard
+cp .env.example .env
+```
+
+### 2. Start everything
+
+```bash
+make up
+# or: docker compose up --build -d
+```
+
+### 3. Verify
+
+| Service    | URL                          |
+|------------|------------------------------|
+| Frontend   | http://localhost:3000         |
+| Backend    | http://localhost:8000         |
+| API Docs   | http://localhost:8000/docs    |
+| Health     | http://localhost:8000/health  |
+
+```bash
+curl http://localhost:8000/health
+# → {"status":"ok"}
+```
+
+### 4. Stop
+
+```bash
+make down
+# or: docker compose down -v
+```
+
+---
+
+## Development
+
+### View logs
+
+```bash
+make logs
+# or: docker compose logs -f
+```
+
+### Run backend tests
+
+```bash
+make test
+# or: docker compose exec server pytest -q
+```
+
+### Makefile targets
+
+| Command     | Description                      |
+|-------------|----------------------------------|
+| `make up`   | Build and start all services     |
+| `make down` | Stop and remove all services     |
+| `make logs` | Tail logs from all services      |
+| `make test` | Run backend test suite           |
+| `make lint` | Lint backend with ruff           |
+
+---
+
+## Project Structure
 
 ```
-smart-insights-dashboard/
-│
-├── client/           # Frontend (Next.js, Tailwind, charts)
-├── server/           # Backend (FastAPI, ML endpoints, auth)
-├── ml/               # ML training scripts, notebooks, saved models
-├── data/             # Raw + processed datasets
-├── docs/             # Architecture diagrams, notes, screenshots
+├── client/          # Next.js frontend
+├── server/          # FastAPI backend
+├── data/            # Raw + processed datasets
+├── ml/              # ML notebooks, training, artifacts
+├── docs/            # Architecture docs, decisions
+├── scripts/         # Data loading & seed scripts
+├── docker-compose.yml
+├── .env.example
+├── Makefile
 └── README.md
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## Environment Variables
 
-| Layer      | Tech |
-|------------|------|
-| Frontend   | Next.js, TailwindCSS, Plotly.js, Recharts |
-| Backend    | FastAPI (Python), REST API |
-| Database   | PostgreSQL |
-| ML / Data  | Pandas, NumPy, Scikit-learn, Surprise (CF) |
-| Deployment | Vercel (frontend), Heroku/AWS (backend), Docker |
+Defined in `.env` (copy from `.env.example`):
 
----
+| Variable              | Description                        |
+|-----------------------|------------------------------------|
+| `POSTGRES_DB`         | Database name                      |
+| `POSTGRES_USER`       | Database user                      |
+| `POSTGRES_PASSWORD`   | Database password                  |
+| `DATABASE_URL`        | Full connection string for backend |
+| `REDIS_URL`           | Redis connection string            |
+| `NEXT_PUBLIC_API_URL` | Backend URL for frontend           |
 
-## ⚡ Quick Start (Local Development)
-
-### 1. Clone repo
-```bash
-git clone https://github.com/JonatanLil/Proj_Blue.git
-cd smart-insights-dashboard
-```
-
-### 2. Setup backend (FastAPI)
-```bash
-cd server
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
-Backend will run at `http://127.0.0.1:8000`.
-
-### 3. Setup frontend (Next.js)
-```bash
-cd client
-npm install
-npm run dev
-```
-
-Frontend will run at `http://localhost:3000`.
-
-### 4. Environment variables
-Create `.env` files in `server/` and `client/`:
-
-**server/.env** (required)
-```
-DATABASE_URL=postgresql://username:password@localhost:5432/sportsdb
-JWT_SECRET=your_strong_random_secret_key_here
-```
-> **Note**: Both `DATABASE_URL` and `JWT_SECRET` are **required**. The application will not start without them.
-
-**client/.env**
-```
-NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
-```
+> Docker Compose constructs `DATABASE_URL` and `REDIS_URL` automatically from the `POSTGRES_*` vars. The values in `.env` are used for local development without Docker.
 
 ---
 
-## 📊 Example API Routes
+## Ports
 
-```http
-POST /api/auth/signup         # register user
-POST /api/auth/login          # login & get JWT
-GET  /api/users/{id}/favorites
-GET  /api/data/player/{id}/stats
-POST /api/predict             # return predicted performance
-GET  /api/recommend           # personalized recommendations
-```
+| Port | Service    |
+|------|------------|
+| 3000 | Frontend   |
+| 8000 | Backend    |
+| 5432 | PostgreSQL |
+| 6379 | Redis      |
 
 ---
 
-## 📅 Roadmap (8–12 Weeks)
+## Roadmap
 
-- [x] Dataset prep + EDA  
-- [x] Backend skeleton + DB schema  
-- [ ] Predictive ML model + API endpoint  
-- [ ] Dashboard with charts & filters  
-- [ ] User auth + saved favorites  
-- [ ] ML integration (recommendations/predictions in UI)  
-- [ ] Deployment (Vercel + Heroku/AWS)  
-- [ ] Polishing, docs, and demo video  
+- [x] Phase 1 — Foundation (Docker, health check, services running)
+- [ ] Phase 2 — Auth, database models, API routes
+- [ ] Phase 3 — Dashboard UI, data visualization
+- [ ] Phase 4 — ML integration, predictions
+- [ ] Phase 5 — Deployment, CI/CD, polish
 
 ---
 
-## 🎥 Demo
+## Author
 
-*(Add screenshots and a short 60–90s Loom/YouTube video link here once ready)*  
+**Jonatan Filip Liljeblad**
+— CS & Math @ Albright College, Data Analytics minor
+— [LinkedIn](https://www.linkedin.com/in/jonatan-liljeblad-690344260/) · [GitHub](https://github.com/JonatanLiljeblad)
 
----
+## License
 
-## 📖 Documentation
-
-- [FastAPI Docs (auto-generated)](http://127.0.0.1:8000/docs)  
-- Full walkthrough in `/docs` folder  
-- GitHub Actions for CI/CD (coming soon)
-
----
-
-## 👤 Author
-
-**Jonatan Filip Liljeblad**  
-- 🎓 CS & Math @ Albright College, Data Analytics minor  
-- 💼 College athlete & golf coach → bridging sports + data + software  
-- 🔗 [LinkedIn](https://www.linkedin.com/in/jonatan-liljeblad-690344260/) | [GitHub](https://github.com/JonatanLil)  
-
----
-
-## ⚖️ License
-
-MIT License – free to use, modify, and share.  
+[MIT](LICENSE)
