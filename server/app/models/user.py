@@ -1,5 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
-from sqlalchemy.orm import relationship
+from datetime import datetime, UTC
+
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
@@ -7,19 +9,10 @@ from app.db.base import Base
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    full_name: Mapped[str] = mapped_column(String(120))
+    hashed_password: Mapped[str] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(UTC))
 
-    favorites = relationship("Favorite", back_populates="user")
-
-
-class Favorite(Base):
-    __tablename__ = "favorites"
-
-    id = Column(Integer, primary_key=True, index=True)
-    item_name = Column(String, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-
-    user = relationship("User", back_populates="favorites")
+    favorites: Mapped[list["Favorite"]] = relationship(back_populates="user")  # noqa: F821

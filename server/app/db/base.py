@@ -1,6 +1,5 @@
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
-Base = declarative_base()
 
-# Import all models here so Base.metadata knows about them
-# e.g. from app.models.user import User  # noqa: F401
+class Base(DeclarativeBase):
+    pass
