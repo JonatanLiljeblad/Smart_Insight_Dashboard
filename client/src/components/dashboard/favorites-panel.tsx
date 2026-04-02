@@ -2,16 +2,21 @@
 
 import Link from "next/link";
 import type { Favorite } from "@/types/favorite";
+import type { Player } from "@/types/player";
 
 interface FavoritesPanelProps {
   favorites: Favorite[];
+  players: Player[];
   isLoading: boolean;
 }
 
 export default function FavoritesPanel({
   favorites,
+  players,
   isLoading,
 }: FavoritesPanelProps) {
+  const playerMap = new Map(players.map((p) => [p.id, p]));
+
   if (isLoading) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-6">
@@ -34,26 +39,34 @@ export default function FavoritesPanel({
       </div>
       {favorites.length === 0 ? (
         <p className="text-sm text-gray-500">
-          No favorites yet. Browse players and add some!
+          Star players you want to track — they&apos;ll appear here.
         </p>
       ) : (
         <ul className="space-y-2">
-          {favorites.slice(0, 5).map((fav) => (
-            <li
-              key={fav.id}
-              className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-2"
-            >
-              <span className="text-sm font-medium text-gray-700">
-                Player #{fav.player_id}
-              </span>
-              <Link
-                href={`/players/${fav.player_id}`}
-                className="text-xs font-medium text-blue-600 hover:text-blue-500"
+          {favorites.slice(0, 5).map((fav) => {
+            const player = playerMap.get(fav.player_id);
+            return (
+              <li
+                key={fav.id}
+                className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-2"
               >
-                View
-              </Link>
-            </li>
-          ))}
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-gray-700 truncate">
+                    {player?.name ?? `Player #${fav.player_id}`}
+                  </span>
+                  {player?.tour && (
+                    <span className="ml-2 text-xs text-gray-400">{player.tour}</span>
+                  )}
+                </div>
+                <Link
+                  href={`/players/${fav.player_id}`}
+                  className="shrink-0 text-xs font-medium text-blue-600 hover:text-blue-500"
+                >
+                  View
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

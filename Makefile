@@ -1,4 +1,4 @@
-.PHONY: up down logs test lint
+.PHONY: up down logs test lint seed migrate
 
 # ── Docker ─────────────────────────────────────────────
 up:
@@ -9,6 +9,13 @@ down:
 
 logs:
 	docker compose logs -f
+
+# ── Database ───────────────────────────────────────────
+migrate:
+	docker compose exec server alembic upgrade head
+
+seed:
+	docker compose exec server python -m scripts.seed_data
 
 # ── Testing ────────────────────────────────────────────
 test:

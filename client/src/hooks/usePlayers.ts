@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { Player } from "@/types/player";
-import { getPlayers, getPlayer } from "@/services/player-service";
+import type { Player, PlayerStat } from "@/types/player";
+import { getPlayers, getPlayer, getPlayerStats } from "@/services/player-service";
 
 export function usePlayers() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -45,4 +45,19 @@ export function usePlayer(id: number) {
   }, [id]);
 
   return { player, isLoading, error };
+}
+
+export function usePlayerStats(id: number) {
+  const [stats, setStats] = useState<PlayerStat[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsLoading(true);
+    getPlayerStats(id)
+      .then(setStats)
+      .catch(() => setStats([]))
+      .finally(() => setIsLoading(false));
+  }, [id]);
+
+  return { stats, isLoading };
 }
