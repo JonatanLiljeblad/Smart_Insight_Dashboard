@@ -4,6 +4,7 @@ import { use } from "react";
 import ProtectedRoute from "@/components/auth/protected-route";
 import DashboardShell from "@/components/dashboard/dashboard-shell";
 import PlayerTrendChart from "@/components/charts/player-trend-chart";
+import PredictionCard from "@/components/predictions/prediction-card";
 import Button from "@/components/ui/button";
 import { usePlayer, usePlayerStats } from "@/hooks/usePlayers";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -73,6 +74,9 @@ export default function PlayerDetailPage({
                 <PlayerTrendChart stats={stats} />
               )}
             </div>
+
+            {/* ML Prediction */}
+            <PredictionCard playerId={playerId} />
 
             {/* Latest stats summary */}
             {stats.length > 0 && (

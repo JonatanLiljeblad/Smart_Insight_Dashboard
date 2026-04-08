@@ -40,6 +40,20 @@ services:
       redis:
         condition: service_healthy
 
+  worker:
+    build: ./server
+    command: celery -A app.core.celery_app worker --loglevel=info
+    volumes:
+      - ./server:/app
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-smartinsights}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   client:
     build: ./client
     ports:

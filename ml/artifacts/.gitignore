@@ -1,0 +1,7 @@
+# Keep directory tracked but ignore model artifacts
+*.joblib
+*.pkl
+*.pickle
+metrics.json
+!.gitkeep
+!.gitignore
