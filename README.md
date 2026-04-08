@@ -1,228 +1,264 @@
-# Smart Insights Dashboard v2
+# Smart Insights Dashboard
 
-A full-stack golf analytics platform built with **FastAPI**, **Next.js**, **PostgreSQL**, and **Redis** — containerized with Docker Compose.
+A full-stack analytics platform with integrated machine learning predictions and asynchronous job processing. Built to demonstrate production-grade system design — not just CRUD.
 
-Track player performance, spot trends, and manage your favorites with a clean, modern dashboard.
+![Dashboard](docs/screenshots/dashboard.png)
 
-> 📌 **Status:** Phase 3.5 — Seeded data, polished UI, charts live
+---
+
+## What it does
+
+Users track professional golf players, analyze historical performance trends, and generate ML-powered scoring predictions — all through a modern dashboard backed by an async processing pipeline.
+
+The system handles the full lifecycle: data ingestion → storage → API → async ML inference → real-time result delivery.
+
+---
+
+## Demo
+
+Start locally and everything is running in under a minute:
+
+| Service         | URL                         |
+|-----------------|-----------------------------|
+| Dashboard       | http://localhost:3000        |
+| API             | http://localhost:8000        |
+| Interactive Docs| http://localhost:8000/docs   |
+
+![Player Detail](docs/screenshots/player-detail.png)
+
+---
+
+## Key Features
+
+### Data & Analytics
+- 15 seeded professional golf players with 180 historical stat records
+- Performance trend charts (scoring average, strokes gained, GIR)
+- Stat cards with real aggregated data
+- Favorites system with per-user tracking
+
+### Machine Learning
+- **Prediction task:** forecast a player's next scoring average from recent performance
+- Baseline model (LinearRegression) vs improved model (RandomForestRegressor)
+- Feature engineering from sliding windows over 5 stat dimensions
+- Model comparison: RMSE 0.63 → 0.62, saved as versioned artifact
+- Predictions served through async job pipeline, not blocking API calls
+
+### Async Processing
+- Celery worker processes prediction jobs asynchronously
+- Redis serves as both message broker and result backend
+- Job lifecycle: `pending → running → completed/failed`
+- Frontend polls job status and renders results on completion
+
+### Authentication
+- JWT-based auth with bcrypt password hashing
+- Register / login / protected routes
+- Token-based API access with Bearer scheme
+
+---
+
+## Architecture
+
+```
+┌────────────┐     ┌────────────┐     ┌────────────┐
+│   Next.js  │────▶│  FastAPI    │────▶│ PostgreSQL │
+│   :3000    │     │   :8000    │     │   :5432    │
+└────────────┘     └─────┬──────┘     └────────────┘
+                         │
+                    ┌────▼─────┐
+                    │  Redis   │
+                    │  :6379   │
+                    └────┬─────┘
+                         │
+                   ┌─────▼──────┐
+                   │  Celery    │
+                   │  Worker    │
+                   └────────────┘
+```
+
+**5 Docker services** orchestrated via Compose:
+
+| Service    | Role                              |
+|------------|-----------------------------------|
+| `client`   | Next.js frontend (SSR + SPA)      |
+| `server`   | FastAPI REST API                  |
+| `worker`   | Celery async task processor       |
+| `db`       | PostgreSQL with persistent volume |
+| `redis`    | Message broker + result backend   |
+
+**Request flow for predictions:**
+1. Client sends `POST /api/predictions/` with player ID
+2. API creates a `PredictionJob` record (status: pending)
+3. Celery task dispatched to worker via Redis
+4. Worker loads trained model, builds features from recent stats, runs inference
+5. Result written to DB, job marked completed
+6. Client polls `GET /api/predictions/{id}` until result arrives
+
+---
+
+## ML Pipeline
+
+```
+Historical Stats → Feature Engineering → Model Training → Saved Artifact
+                                                              │
+Player Request → Recent Stats → Feature Vector → Inference → Prediction
+```
+
+| Component         | Detail                                      |
+|-------------------|---------------------------------------------|
+| Task              | Predict next scoring average                |
+| Features          | 3-event rolling mean of 5 stat dimensions   |
+| Baseline          | LinearRegression (RMSE: 0.6264)             |
+| Improved          | RandomForestRegressor (RMSE: 0.6211)        |
+| Training samples  | 135 (from 15 players × 12 events each)      |
+| Artifact          | `scoring_model.joblib` (scikit-learn)       |
+
+Train the model:
+
+```bash
+make train
+```
 
 ---
 
 ## Tech Stack
 
-| Layer     | Technology                          |
-|-----------|-------------------------------------|
-| Frontend  | Next.js 15, React 19, TypeScript, Tailwind CSS |
-| Backend   | FastAPI, Python 3.12, SQLAlchemy 2.0 |
-| Database  | PostgreSQL 16, Alembic migrations   |
-| Cache     | Redis 7                             |
-| Auth      | JWT (python-jose), bcrypt           |
-| Charts    | Recharts                            |
-| Infra     | Docker, Docker Compose              |
+| Layer      | Technologies                                            |
+|------------|---------------------------------------------------------|
+| Frontend   | Next.js 15, React 19, TypeScript, Tailwind CSS, Recharts |
+| Backend    | FastAPI, Python 3.12, Pydantic v2                       |
+| Data       | SQLAlchemy 2.0 (typed ORM), Alembic, PostgreSQL 16     |
+| Async      | Celery 5.4, Redis 7                                    |
+| ML         | scikit-learn, pandas, NumPy, joblib                     |
+| Auth       | JWT (python-jose), bcrypt (passlib)                     |
+| Infra      | Docker, Docker Compose, Makefile                        |
+| Testing    | pytest, ruff                                            |
 
 ---
 
-## Features
-
-- **User authentication** — register, login, JWT-protected routes
-- **Player database** — 15 seeded professional golf players with stats
-- **Performance charts** — scoring averages and strokes gained over time
-- **Favorites system** — star players and track them from your dashboard
-- **Analytics dashboard** — stat cards, player table, trend charts
-- **REST API** — clean FastAPI backend with OpenAPI docs
-
----
-
-## Quick Start
+## Getting Started
 
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose
 
-### 1. Clone and configure
+### Setup
 
 ```bash
 git clone https://github.com/JonatanLiljeblad/Smart_Insight_Dashboard.git
 cd Smart_Insight_Dashboard
 cp .env.example .env
+
+make up          # build and start all 5 services
+make migrate     # run database migrations
+make seed        # populate 15 players + 180 stat records
+make train       # train ML model and save artifact
 ```
 
-### 2. Start everything
-
-```bash
-make up
-# or: docker compose up --build -d
-```
-
-### 3. Set up the database
-
-```bash
-make migrate   # run Alembic migrations
-make seed      # populate with demo data (15 players + stats)
-```
-
-### 4. Verify
-
-| Service    | URL                          |
-|------------|------------------------------|
-| Frontend   | http://localhost:3000         |
-| Backend    | http://localhost:8000         |
-| API Docs   | http://localhost:8000/docs    |
-| Health     | http://localhost:8000/health  |
+### Verify
 
 ```bash
 curl http://localhost:8000/health
 # → {"status":"ok"}
 ```
 
-### 5. Try it out
+Open http://localhost:3000, register an account, and explore the dashboard. Click any player to see their stats, trend chart, and generate an ML prediction.
 
-1. Open http://localhost:3000 and click **Get started**
-2. Register an account
-3. Browse the dashboard — players, stats, and charts are populated
-4. Click a player to see their performance trend
-5. Star players to add them to your favorites
-
-### 6. Stop
+### Stop
 
 ```bash
 make down
-# or: docker compose down -v
 ```
 
 ---
 
-## API Routes
+## API
 
-| Method | Endpoint                     | Auth     | Description              |
-|--------|------------------------------|----------|--------------------------|
-| GET    | `/health`                    | Public   | Health check             |
-| POST   | `/api/auth/register`         | Public   | Register a new user      |
-| POST   | `/api/auth/login`            | Public   | Login, returns JWT       |
-| GET    | `/api/auth/me`               | Bearer   | Current user profile     |
-| GET    | `/api/players/`              | Bearer   | List players             |
-| GET    | `/api/players/{id}`          | Bearer   | Player detail            |
-| GET    | `/api/players/{id}/stats`    | Bearer   | Player stat history      |
-| GET    | `/api/favorites/`            | Bearer   | List user favorites      |
-| POST   | `/api/favorites/`            | Bearer   | Add a favorite           |
-| DELETE | `/api/favorites/{id}`        | Bearer   | Remove a favorite        |
+| Method | Endpoint                     | Auth   | Description                     |
+|--------|------------------------------|--------|---------------------------------|
+| GET    | `/health`                    | —      | Health check                    |
+| POST   | `/api/auth/register`         | —      | Create account                  |
+| POST   | `/api/auth/login`            | —      | Get JWT token                   |
+| GET    | `/api/auth/me`               | Bearer | Current user                    |
+| GET    | `/api/players/`              | Bearer | List players                    |
+| GET    | `/api/players/{id}`          | Bearer | Player detail                   |
+| GET    | `/api/players/{id}/stats`    | Bearer | Player stat history             |
+| GET    | `/api/favorites/`            | Bearer | List favorites                  |
+| POST   | `/api/favorites/`            | Bearer | Add favorite                    |
+| DELETE | `/api/favorites/{id}`        | Bearer | Remove favorite                 |
+| POST   | `/api/predictions/`          | Bearer | Create async prediction job     |
+| GET    | `/api/predictions/{id}`      | Bearer | Poll prediction job status      |
 
-Full interactive docs at http://localhost:8000/docs
-
----
-
-## Development
-
-### Makefile targets
-
-| Command        | Description                        |
-|----------------|------------------------------------|
-| `make up`      | Build and start all services       |
-| `make down`    | Stop and remove all services       |
-| `make logs`    | Tail logs from all services        |
-| `make migrate` | Run Alembic database migrations    |
-| `make seed`    | Seed database with demo data       |
-| `make test`    | Run backend test suite             |
-| `make lint`    | Lint backend with ruff             |
-
-### Run tests
-
-```bash
-make test
-# 7 passed — health, register, login, auth, duplicates
-```
-
-### Run linter
-
-```bash
-make lint
-# All checks passed!
-```
+Interactive docs at http://localhost:8000/docs
 
 ---
 
 ## Project Structure
 
 ```
-├── client/                # Next.js frontend
+├── client/                    # Next.js frontend
 │   └── src/
-│       ├── app/           # Pages (dashboard, login, register, players, favorites)
-│       ├── components/    # UI components, auth, dashboard, charts
-│       ├── hooks/         # useAuth, usePlayers, useFavorites
-│       ├── services/      # API client layer
-│       ├── lib/           # Shared utilities, auth helpers
-│       └── types/         # TypeScript interfaces
-├── server/                # FastAPI backend
+│       ├── app/               # Pages: dashboard, login, register, players, favorites
+│       ├── components/        # UI, auth, charts, predictions
+│       ├── hooks/             # useAuth, usePlayers, useFavorites, usePrediction
+│       ├── services/          # Typed API client layer
+│       └── types/             # TypeScript interfaces
+│
+├── server/                    # FastAPI backend
 │   ├── app/
-│   │   ├── api/           # Routes (auth, players, favorites) + dependencies
-│   │   ├── core/          # Config, security (JWT, bcrypt)
-│   │   ├── db/            # SQLAlchemy engine, Base, session
-│   │   ├── models/        # ORM models (User, Player, PlayerStat, Favorite)
-│   │   ├── schemas/       # Pydantic schemas
-│   │   ├── services/      # Business logic (auth service)
-│   │   └── main.py        # FastAPI app entrypoint
-│   ├── alembic/           # Database migrations
-│   ├── scripts/           # Seed data script
-│   └── tests/             # Pytest suite
-├── data/                  # Raw + processed datasets
-├── ml/                    # ML notebooks, training, artifacts
-├── docs/                  # Architecture docs, decisions
-├── scripts/               # Project-level scripts
-├── docker-compose.yml
-├── .env.example
-├── Makefile
-└── README.md
+│   │   ├── api/routes/        # Auth, players, favorites, predictions
+│   │   ├── api/dependencies/  # Auth middleware
+│   │   ├── core/              # Config, security, Celery app
+│   │   ├── db/                # Engine, session, DeclarativeBase
+│   │   ├── models/            # User, Player, PlayerStat, Favorite, PredictionJob
+│   │   ├── schemas/           # Pydantic request/response schemas
+│   │   ├── services/          # Auth + prediction business logic
+│   │   ├── tasks/             # Celery task definitions
+│   │   └── main.py            # FastAPI entrypoint
+│   ├── alembic/               # Database migrations
+│   ├── scripts/               # Seed data + model training
+│   └── tests/                 # pytest suite
+│
+├── ml/                        # ML artifacts, training code, evaluation
+├── docker-compose.yml         # 5-service orchestration
+├── Makefile                   # Developer workflow commands
+└── .env.example               # Environment variable template
 ```
 
 ---
 
-## Environment Variables
+## Development
 
-Defined in `.env` (copy from `.env.example`):
-
-| Variable                     | Description                        |
-|------------------------------|------------------------------------|
-| `POSTGRES_DB`                | Database name                      |
-| `POSTGRES_USER`              | Database user                      |
-| `POSTGRES_PASSWORD`          | Database password                  |
-| `DATABASE_URL`               | Full connection string for backend |
-| `REDIS_URL`                  | Redis connection string            |
-| `JWT_SECRET`                 | Secret key for JWT tokens          |
-| `JWT_ALGORITHM`              | JWT signing algorithm (HS256)      |
-| `ACCESS_TOKEN_EXPIRE_MINUTES`| Token expiry in minutes            |
-| `NEXT_PUBLIC_API_URL`        | Backend URL for frontend           |
-
-> Docker Compose constructs `DATABASE_URL` and `REDIS_URL` automatically from the `POSTGRES_*` vars. The values in `.env` are used for local development without Docker.
+| Command             | Description                              |
+|---------------------|------------------------------------------|
+| `make up`           | Build and start all services             |
+| `make down`         | Stop and tear down                       |
+| `make logs`         | Tail all service logs                    |
+| `make worker-logs`  | Tail Celery worker logs                  |
+| `make migrate`      | Apply Alembic migrations                 |
+| `make seed`         | Seed demo data                           |
+| `make train`        | Train and save ML model                  |
+| `make test`         | Run pytest (7 tests)                     |
+| `make lint`         | Lint with ruff                           |
 
 ---
 
-## Ports
+## Why This Project
 
-| Port | Service    |
-|------|------------|
-| 3000 | Frontend   |
-| 8000 | Backend    |
-| 5432 | PostgreSQL |
-| 6379 | Redis      |
+This isn't a tutorial app. It's designed to demonstrate how real systems work:
 
----
-
-## Roadmap
-
-- [x] Phase 1 — Foundation (Docker, health check, services running)
-- [x] Phase 2 — Auth, database models, API routes, Alembic migrations
-- [x] Phase 3 — Dashboard UI, data visualization, full-stack integration
-- [x] Phase 3.5 — Seed data, polish, charts with real data
-- [ ] Phase 4 — ML integration, predictions
-- [ ] Phase 5 — Deployment, CI/CD, polish
+- **Async job processing** — predictions don't block the API. Celery workers process them independently, with Redis as the message broker. The frontend polls for results.
+- **ML in production context** — the model isn't a notebook. It's trained from a script, saved as an artifact, loaded by the worker, and served through an API with proper job lifecycle management.
+- **Clean separation** — routes don't contain business logic. Models don't leak into schemas. The service layer handles coordination. Each file has one clear responsibility.
+- **System design** — 5 services, 3 data stores, async messaging, typed ORM, migration management, environment-based configuration. The kind of architecture you'd see in a real backend team.
 
 ---
 
 ## Author
 
 **Jonatan Filip Liljeblad**
-— CS & Math @ Albright College, Data Analytics minor
-— [LinkedIn](https://www.linkedin.com/in/jonatan-liljeblad-690344260/) · [GitHub](https://github.com/JonatanLiljeblad)
+CS & Math @ Albright College · Data Analytics Minor
+
+[LinkedIn](https://www.linkedin.com/in/jonatan-liljeblad-690344260/) · [GitHub](https://github.com/JonatanLiljeblad)
 
 ## License
 
