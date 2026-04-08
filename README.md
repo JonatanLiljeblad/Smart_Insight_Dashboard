@@ -1,22 +1,16 @@
 # Smart Insights Dashboard
 
-A full-stack analytics platform with integrated machine learning predictions and asynchronous job processing. Built to demonstrate production-grade system design — not just CRUD.
+Full-stack analytics platform that ingests player performance data, serves it through a typed REST API, and runs ML scoring predictions via an async Celery pipeline — all orchestrated across five Docker services.
 
 ![Dashboard](docs/screenshots/dashboard.png)
 
 ---
 
-## What it does
-
-Users track professional golf players, analyze historical performance trends, and generate ML-powered scoring predictions — all through a modern dashboard backed by an async processing pipeline.
-
-The system handles the full lifecycle: data ingestion → storage → API → async ML inference → real-time result delivery.
-
----
-
 ## Demo
 
-Start locally and everything is running in under a minute:
+```bash
+make up && make migrate && make seed && make train
+```
 
 | Service         | URL                         |
 |-----------------|-----------------------------|
@@ -31,28 +25,25 @@ Start locally and everything is running in under a minute:
 ## Key Features
 
 ### Data & Analytics
-- 15 seeded professional golf players with 180 historical stat records
-- Performance trend charts (scoring average, strokes gained, GIR)
-- Stat cards with real aggregated data
-- Favorites system with per-user tracking
+- Historical stat tracking across 5 performance dimensions per player
+- Trend visualization (scoring average, strokes gained, driving accuracy, GIR, putting)
+- Per-user favorites with dashboard-level aggregation
+- Real stat cards computed from actual data — no hardcoded values
 
 ### Machine Learning
-- **Prediction task:** forecast a player's next scoring average from recent performance
-- Baseline model (LinearRegression) vs improved model (RandomForestRegressor)
-- Feature engineering from sliding windows over 5 stat dimensions
-- Model comparison: RMSE 0.63 → 0.62, saved as versioned artifact
-- Predictions served through async job pipeline, not blocking API calls
+- Scoring prediction from sliding-window feature engineering over recent events
+- Baseline vs improved model comparison (LinearRegression → RandomForest)
+- Trained artifact served through async job pipeline — predictions never block the API
+- Full job lifecycle: `pending → running → completed/failed` with error handling
 
 ### Async Processing
-- Celery worker processes prediction jobs asynchronously
-- Redis serves as both message broker and result backend
-- Job lifecycle: `pending → running → completed/failed`
-- Frontend polls job status and renders results on completion
+- Celery worker consumes jobs from Redis, runs inference, writes results to Postgres
+- Frontend polls job status and renders prediction on completion
+- Worker and API share the same codebase but run as independent containers
 
 ### Authentication
-- JWT-based auth with bcrypt password hashing
-- Register / login / protected routes
-- Token-based API access with Bearer scheme
+- JWT auth with bcrypt hashing, Bearer token scheme
+- Protected routes across both API and frontend
 
 ---
 
@@ -75,23 +66,19 @@ Start locally and everything is running in under a minute:
                    └────────────┘
 ```
 
-**5 Docker services** orchestrated via Compose:
-
 | Service    | Role                              |
 |------------|-----------------------------------|
-| `client`   | Next.js frontend (SSR + SPA)      |
-| `server`   | FastAPI REST API                  |
-| `worker`   | Celery async task processor       |
-| `db`       | PostgreSQL with persistent volume |
+| `client`   | Next.js 15 frontend (SSR + SPA)   |
+| `server`   | FastAPI REST API + auth           |
+| `worker`   | Celery task processor             |
+| `db`       | PostgreSQL 16, persistent volume  |
 | `redis`    | Message broker + result backend   |
 
-**Request flow for predictions:**
-1. Client sends `POST /api/predictions/` with player ID
-2. API creates a `PredictionJob` record (status: pending)
-3. Celery task dispatched to worker via Redis
-4. Worker loads trained model, builds features from recent stats, runs inference
-5. Result written to DB, job marked completed
-6. Client polls `GET /api/predictions/{id}` until result arrives
+**Prediction request flow:**
+1. `POST /api/predictions/` creates a `PredictionJob` record
+2. Celery task dispatched to worker via Redis
+3. Worker loads model artifact, builds feature vector from recent stats, runs inference
+4. Result written to DB → client polls `GET /api/predictions/{id}` until complete
 
 ---
 
@@ -100,23 +87,17 @@ Start locally and everything is running in under a minute:
 ```
 Historical Stats → Feature Engineering → Model Training → Saved Artifact
                                                               │
-Player Request → Recent Stats → Feature Vector → Inference → Prediction
+Player Request → Recent Stats → Feature Vector → Inference → Result
 ```
 
-| Component         | Detail                                      |
+| Detail            | Value                                       |
 |-------------------|---------------------------------------------|
 | Task              | Predict next scoring average                |
-| Features          | 3-event rolling mean of 5 stat dimensions   |
-| Baseline          | LinearRegression (RMSE: 0.6264)             |
-| Improved          | RandomForestRegressor (RMSE: 0.6211)        |
-| Training samples  | 135 (from 15 players × 12 events each)      |
-| Artifact          | `scoring_model.joblib` (scikit-learn)       |
-
-Train the model:
-
-```bash
-make train
-```
+| Features          | 3-event rolling mean across 5 stat columns  |
+| Baseline          | LinearRegression — RMSE 0.6264              |
+| Improved          | RandomForest — RMSE 0.6211                  |
+| Training set      | 135 samples from 15 players × 12 events     |
+| Artifact          | `scoring_model.joblib`                      |
 
 ---
 
@@ -131,17 +112,13 @@ make train
 | ML         | scikit-learn, pandas, NumPy, joblib                     |
 | Auth       | JWT (python-jose), bcrypt (passlib)                     |
 | Infra      | Docker, Docker Compose, Makefile                        |
-| Testing    | pytest, ruff                                            |
+| Quality    | pytest, ruff                                            |
 
 ---
 
 ## Getting Started
 
-### Prerequisites
-
-- [Docker](https://docs.docker.com/get-docker/) and Docker Compose
-
-### Setup
+**Requires:** [Docker](https://docs.docker.com/get-docker/) and Docker Compose
 
 ```bash
 git clone https://github.com/JonatanLiljeblad/Smart_Insight_Dashboard.git
@@ -149,24 +126,20 @@ cd Smart_Insight_Dashboard
 cp .env.example .env
 
 make up          # build and start all 5 services
-make migrate     # run database migrations
-make seed        # populate 15 players + 180 stat records
-make train       # train ML model and save artifact
+make migrate     # apply Alembic migrations
+make seed        # load 15 players + 180 stat records
+make train       # train and save ML model artifact
 ```
-
-### Verify
 
 ```bash
 curl http://localhost:8000/health
 # → {"status":"ok"}
 ```
 
-Open http://localhost:3000, register an account, and explore the dashboard. Click any player to see their stats, trend chart, and generate an ML prediction.
-
-### Stop
+Open http://localhost:3000 → register → explore the dashboard → click a player → generate a prediction.
 
 ```bash
-make down
+make down        # stop and tear down
 ```
 
 ---
@@ -181,12 +154,12 @@ make down
 | GET    | `/api/auth/me`               | Bearer | Current user                    |
 | GET    | `/api/players/`              | Bearer | List players                    |
 | GET    | `/api/players/{id}`          | Bearer | Player detail                   |
-| GET    | `/api/players/{id}/stats`    | Bearer | Player stat history             |
+| GET    | `/api/players/{id}/stats`    | Bearer | Stat history                    |
 | GET    | `/api/favorites/`            | Bearer | List favorites                  |
 | POST   | `/api/favorites/`            | Bearer | Add favorite                    |
 | DELETE | `/api/favorites/{id}`        | Bearer | Remove favorite                 |
-| POST   | `/api/predictions/`          | Bearer | Create async prediction job     |
-| GET    | `/api/predictions/{id}`      | Bearer | Poll prediction job status      |
+| POST   | `/api/predictions/`          | Bearer | Create prediction job (async)   |
+| GET    | `/api/predictions/{id}`      | Bearer | Poll job status + result        |
 
 Interactive docs at http://localhost:8000/docs
 
@@ -215,13 +188,13 @@ Interactive docs at http://localhost:8000/docs
 │   │   ├── tasks/             # Celery task definitions
 │   │   └── main.py            # FastAPI entrypoint
 │   ├── alembic/               # Database migrations
-│   ├── scripts/               # Seed data + model training
+│   ├── scripts/               # Seed data, model training
 │   └── tests/                 # pytest suite
 │
-├── ml/                        # ML artifacts, training code, evaluation
+├── ml/                        # Artifacts, evaluation metrics
 ├── docker-compose.yml         # 5-service orchestration
-├── Makefile                   # Developer workflow commands
-└── .env.example               # Environment variable template
+├── Makefile                   # Developer workflow
+└── .env.example               # Environment template
 ```
 
 ---
@@ -234,22 +207,20 @@ Interactive docs at http://localhost:8000/docs
 | `make down`         | Stop and tear down                       |
 | `make logs`         | Tail all service logs                    |
 | `make worker-logs`  | Tail Celery worker logs                  |
-| `make migrate`      | Apply Alembic migrations                 |
+| `make migrate`      | Apply database migrations                |
 | `make seed`         | Seed demo data                           |
 | `make train`        | Train and save ML model                  |
-| `make test`         | Run pytest (7 tests)                     |
+| `make test`         | Run pytest suite                         |
 | `make lint`         | Lint with ruff                           |
 
 ---
 
-## Why This Project
+## Design Decisions
 
-This isn't a tutorial app. It's designed to demonstrate how real systems work:
-
-- **Async job processing** — predictions don't block the API. Celery workers process them independently, with Redis as the message broker. The frontend polls for results.
-- **ML in production context** — the model isn't a notebook. It's trained from a script, saved as an artifact, loaded by the worker, and served through an API with proper job lifecycle management.
-- **Clean separation** — routes don't contain business logic. Models don't leak into schemas. The service layer handles coordination. Each file has one clear responsibility.
-- **System design** — 5 services, 3 data stores, async messaging, typed ORM, migration management, environment-based configuration. The kind of architecture you'd see in a real backend team.
+- **Async over sync** — predictions dispatch to Celery rather than running in the request cycle. The API stays responsive regardless of model complexity or load.
+- **ML as a service** — the model is trained offline, saved as an artifact, and loaded by the worker at task time. Swapping models requires no code changes to the API.
+- **Separation of concerns** — routes delegate to services, services operate on models, schemas define the API contract. No ORM leakage into route handlers.
+- **Shared image, separate roles** — the API server and Celery worker use the same Docker image with different entrypoints, keeping the deployment surface small.
 
 ---
 
