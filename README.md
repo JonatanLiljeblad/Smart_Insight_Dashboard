@@ -1,6 +1,9 @@
 # Smart Insights Dashboard
+> ⚡ Built to demonstrate production-style backend systems, async processing, and ML integration — not just a CRUD app.
 
-Full-stack analytics platform that ingests player performance data, serves it through a typed REST API, and runs ML scoring predictions via an async Celery pipeline — all orchestrated across five Docker services.
+Full-stack analytics platform for tracking professional golf performance and generating machine learning–based scoring predictions.
+
+Designed as a production-style system with an async job pipeline (Celery + Redis), typed API (FastAPI + SQLAlchemy), and a modern frontend (Next.js), all orchestrated across five Docker services.
 
 ![Dashboard](docs/screenshots/dashboard.png)
 
@@ -22,6 +25,19 @@ make up && make migrate && make seed && make train
 
 ---
 
+## 💡 Why This Project?
+
+This project goes beyond CRUD applications and focuses on real-world backend challenges:
+
+- Designing async job pipelines to handle long-running ML tasks
+- Integrating machine learning into a production-style system
+- Building a clean separation between API, worker, and data layers
+- Managing stateful workflows (job lifecycle, polling, result persistence)
+
+It reflects how modern data-driven applications are built in production environments.
+
+---
+
 ## Key Features
 
 ### Data & Analytics
@@ -31,15 +47,15 @@ make up && make migrate && make seed && make train
 - Real stat cards computed from actual data — no hardcoded values
 
 ### Machine Learning
-- Scoring prediction from sliding-window feature engineering over recent events
-- Baseline vs improved model comparison (LinearRegression → RandomForest)
+- Predicts next scoring average using rolling-window feature engineering over recent performances
+- Evaluated baseline (Linear Regression) vs ensemble model (Random Forest)
 - Trained artifact served through async job pipeline — predictions never block the API
-- Full job lifecycle: `pending → running → completed/failed` with error handling
+- Full job lifecycle: `pending → running → completed | failed` with error handling
 
 ### Async Processing
 - Celery worker consumes jobs from Redis, runs inference, writes results to Postgres
 - Frontend polls job status and renders prediction on completion
-- Worker and API share the same codebase but run as independent containers
+- Worker and API share the same codebase but run as independent containerized services
 
 ### Authentication
 - JWT auth with bcrypt hashing, Bearer token scheme
@@ -51,7 +67,7 @@ make up && make migrate && make seed && make train
 
 ```
 ┌────────────┐     ┌────────────┐     ┌────────────┐
-│   Next.js  │────▶│  FastAPI    │────▶│ PostgreSQL │
+│   Next.js  │────▶│  FastAPI   │────▶│ PostgreSQL │
 │   :3000    │     │   :8000    │     │   :5432    │
 └────────────┘     └─────┬──────┘     └────────────┘
                          │
@@ -82,6 +98,15 @@ make up && make migrate && make seed && make train
 
 ---
 
+## ⚙️ System Design Highlights
+
+- **Non-blocking inference** — predictions run asynchronously via Celery workers
+- **Event-driven workflow** — job creation, execution, and completion handled via Redis queue
+- **Stateless API layer** — FastAPI handles requests while heavy computation is offloaded
+- **Scalable by design** — worker processes can be horizontally scaled independently
+
+---
+
 ## ML Pipeline
 
 ```
@@ -105,10 +130,10 @@ Player Request → Recent Stats → Feature Vector → Inference → Result
 
 | Layer      | Technologies                                            |
 |------------|---------------------------------------------------------|
-| Frontend   | Next.js 15, React 19, TypeScript, Tailwind CSS, Recharts |
+| Frontend   | Next.js 15, React 19, TypeScript, Tailwind CSS, Recharts|
 | Backend    | FastAPI, Python 3.12, Pydantic v2                       |
-| Data       | SQLAlchemy 2.0 (typed ORM), Alembic, PostgreSQL 16     |
-| Async      | Celery 5.4, Redis 7                                    |
+| Data       | SQLAlchemy 2.0 (typed ORM), Alembic, PostgreSQL 16      |
+| Async      | Celery 5.4, Redis 7                                     |
 | ML         | scikit-learn, pandas, NumPy, joblib                     |
 | Auth       | JWT (python-jose), bcrypt (passlib)                     |
 | Infra      | Docker, Docker Compose, Makefile                        |
@@ -221,6 +246,15 @@ Interactive docs at http://localhost:8000/docs
 - **ML as a service** — the model is trained offline, saved as an artifact, and loaded by the worker at task time. Swapping models requires no code changes to the API.
 - **Separation of concerns** — routes delegate to services, services operate on models, schemas define the API contract. No ORM leakage into route handlers.
 - **Shared image, separate roles** — the API server and Celery worker use the same Docker image with different entrypoints, keeping the deployment surface small.
+
+---
+
+## 🔭 Future Improvements
+
+- Replace polling with WebSockets for real-time job updates
+- Add model versioning and experiment tracking (MLflow)
+- Introduce caching layer for frequently accessed player data
+- Deploy to cloud infrastructure (AWS/GCP) with CI/CD pipeline
 
 ---
 
