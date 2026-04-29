@@ -30,6 +30,7 @@ def test_login(client):
     })
     assert resp.status_code == 200
     assert "access_token" in resp.json()
+    assert "refresh_token=" in resp.headers["set-cookie"]
 
 
 def test_login_wrong_password(client):
@@ -59,6 +60,41 @@ def test_me(client):
     resp = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
     assert resp.json()["email"] == "me@example.com"
+
+
+def test_refresh_returns_new_access_token(client):
+    client.post("/api/auth/register", json={
+        "email": "refresh@example.com",
+        "full_name": "Refresh User",
+        "password": "secret123",
+    })
+    client.post("/api/auth/login", json={
+        "email": "refresh@example.com",
+        "password": "secret123",
+    })
+
+    refresh_resp = client.post("/api/auth/refresh")
+    assert refresh_resp.status_code == 200
+    assert "access_token" in refresh_resp.json()
+    assert "refresh_token=" in refresh_resp.headers["set-cookie"]
+
+
+def test_logout_revokes_refresh_session(client):
+    client.post("/api/auth/register", json={
+        "email": "logout@example.com",
+        "full_name": "Logout User",
+        "password": "secret123",
+    })
+    client.post("/api/auth/login", json={
+        "email": "logout@example.com",
+        "password": "secret123",
+    })
+
+    logout_resp = client.post("/api/auth/logout")
+    assert logout_resp.status_code == 204
+
+    refresh_resp = client.post("/api/auth/refresh")
+    assert refresh_resp.status_code == 401
 
 
 def test_me_unauthorized(client):

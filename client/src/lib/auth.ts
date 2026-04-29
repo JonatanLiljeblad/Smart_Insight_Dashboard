@@ -1,14 +1,48 @@
-const TOKEN_KEY = "token";
+import type { Token } from "@/types/auth";
 
-export function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+let accessToken: string | null = null;
+let refreshPromise: Promise<string | null> | null = null;
+
+export function getAccessToken(): string | null {
+  return accessToken;
 }
 
-export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
+export function setAccessToken(token: string | null): void {
+  accessToken = token;
 }
 
-export function removeToken(): void {
-  localStorage.removeItem(TOKEN_KEY);
+export function clearAccessToken(): void {
+  accessToken = null;
+}
+
+export async function refreshAccessToken(): Promise<string | null> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = fetch(`${API_BASE}/api/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        clearAccessToken();
+        return null;
+      }
+
+      const body = (await res.json()) as Token;
+      setAccessToken(body.access_token);
+      return body.access_token;
+    })
+    .catch(() => {
+      clearAccessToken();
+      return null;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+
+  return refreshPromise;
 }

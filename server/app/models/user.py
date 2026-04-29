@@ -16,3 +16,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(UTC))
 
     favorites: Mapped[list["Favorite"]] = relationship(back_populates="user")  # noqa: F821
+    auth_sessions: Mapped[list["AuthSession"]] = relationship(  # noqa: F821
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )

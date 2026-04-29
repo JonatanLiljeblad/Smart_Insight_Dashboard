@@ -36,7 +36,7 @@ export default function DashboardShell({
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-500">{user?.full_name}</span>
-            <Button variant="ghost" size="sm" onClick={logout}>
+            <Button variant="ghost" size="sm" onClick={() => void logout()}>
               Sign out
             </Button>
           </div>

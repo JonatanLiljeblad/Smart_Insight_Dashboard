@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "change-me-in-production"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 14
+    REFRESH_TOKEN_COOKIE_NAME: str = "refresh_token"
+    REFRESH_TOKEN_COOKIE_SECURE: bool = False
+    REFRESH_TOKEN_COOKIE_SAMESITE: str = "lax"
 
     @field_validator("JWT_SECRET", mode="after")
     @classmethod
@@ -42,6 +46,17 @@ class Settings(BaseSettings):
                 stacklevel=2,
             )
         return v
+
+    @field_validator("REFRESH_TOKEN_COOKIE_SAMESITE", mode="after")
+    @classmethod
+    def validate_same_site(cls, v: str) -> str:
+        normalized = v.lower()
+        allowed = {"lax", "strict", "none"}
+        if normalized not in allowed:
+            raise ValueError(
+                f"REFRESH_TOKEN_COOKIE_SAMESITE must be one of {sorted(allowed)}"
+            )
+        return normalized
 
 
 settings = Settings()

@@ -10,7 +10,7 @@ import {
 } from "react";
 import type { User } from "@/types/user";
 import type { LoginPayload, RegisterPayload } from "@/types/auth";
-import { getToken, setToken, removeToken } from "@/lib/auth";
+import { clearAccessToken } from "@/lib/auth";
 import * as authService from "@/services/auth";
 
 interface AuthState {
@@ -19,7 +19,7 @@ interface AuthState {
   isAuthenticated: boolean;
   login: (payload: LoginPayload) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -29,21 +29,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
+    let isMounted = true;
+
     authService
-      .getCurrentUser()
-      .then(setUser)
-      .catch(() => removeToken())
-      .finally(() => setIsLoading(false));
+      .refresh()
+      .then((token) => {
+        if (!token) return null;
+        return authService.getCurrentUser();
+      })
+      .then((currentUser) => {
+        if (isMounted) {
+          setUser(currentUser);
+        }
+      })
+      .catch(() => clearAccessToken())
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = useCallback(async (payload: LoginPayload) => {
-    const { access_token } = await authService.login(payload);
-    setToken(access_token);
+    await authService.login(payload);
     const currentUser = await authService.getCurrentUser();
     setUser(currentUser);
   }, []);
@@ -53,8 +65,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await login({ email: payload.email, password: payload.password });
   }, [login]);
 
-  const logout = useCallback(() => {
-    removeToken();
+  const logout = useCallback(async () => {
+    await authService.logout();
+    clearAccessToken();
     setUser(null);
   }, []);
 
