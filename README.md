@@ -237,8 +237,10 @@ Interactive docs at http://localhost:8000/docs
 | `make migrate`      | Apply database migrations                |
 | `make seed`         | Seed demo data                           |
 | `make train`        | Train and save ML model                  |
-| `make test`         | Run pytest suite                         |
-| `make lint`         | Lint with ruff                           |
+| `make test`         | Run backend pytest + frontend production build |
+| `make test-server`  | Run backend pytest suite                 |
+| `make build-client` | Build the frontend locally               |
+| `make lint`         | Run backend Ruff lint checks             |
 
 ---
 

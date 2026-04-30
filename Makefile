@@ -1,4 +1,4 @@
-.PHONY: up down logs test lint seed migrate train worker-logs
+.PHONY: up down logs test test-server build-client lint lint-server seed migrate train worker-logs
 
 # ── Docker ─────────────────────────────────────────────
 up:
@@ -26,8 +26,18 @@ train:
 
 # ── Testing ────────────────────────────────────────────
 test:
+	$(MAKE) test-server
+	$(MAKE) build-client
+
+test-server:
 	docker compose exec server pytest -q
+
+build-client:
+	docker compose exec client npm run build
 
 # ── Linting ────────────────────────────────────────────
 lint:
+	$(MAKE) lint-server
+
+lint-server:
 	docker compose exec server ruff check .

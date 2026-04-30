@@ -6,6 +6,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.prediction import PredictionJobCreate, PredictionJobOut
 from app.services.prediction_service import create_prediction_job, get_prediction_job
+from app.services.player_service import PlayerNotFoundError
 from app.tasks.prediction_tasks import run_prediction
 
 router = APIRouter()
@@ -17,7 +18,10 @@ def request_prediction(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    job = create_prediction_job(db, payload, current_user.id)
+    try:
+        job = create_prediction_job(db, payload, current_user.id)
+    except PlayerNotFoundError:
+        raise HTTPException(status_code=404, detail="Player not found")
     run_prediction.delay(job.id)
     return job
 
