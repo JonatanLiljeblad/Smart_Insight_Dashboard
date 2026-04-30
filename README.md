@@ -175,11 +175,13 @@ make down        # stop and tear down
 |--------|------------------------------|--------|---------------------------------|
 | GET    | `/health`                    | —      | Health check                    |
 | POST   | `/api/auth/register`         | —      | Create account                  |
-| POST   | `/api/auth/login`            | —      | Get JWT token                   |
+| POST   | `/api/auth/login`            | —      | Get access token + set refresh cookie |
+| POST   | `/api/auth/refresh`          | Cookie | Rotate refresh cookie + issue new access token |
+| POST   | `/api/auth/logout`           | Cookie | Revoke current refresh session  |
 | GET    | `/api/auth/me`               | Bearer | Current user                    |
-| GET    | `/api/players/`              | Bearer | List players                    |
-| GET    | `/api/players/{id}`          | Bearer | Player detail                   |
-| GET    | `/api/players/{id}/stats`    | Bearer | Stat history                    |
+| GET    | `/api/players/`              | Public | List players                    |
+| GET    | `/api/players/{id}`          | Public | Player detail                   |
+| GET    | `/api/players/{id}/stats`    | Public | Stat history                    |
 | GET    | `/api/favorites/`            | Bearer | List favorites                  |
 | POST   | `/api/favorites/`            | Bearer | Add favorite                    |
 | DELETE | `/api/favorites/{id}`        | Bearer | Remove favorite                 |
@@ -245,6 +247,7 @@ Interactive docs at http://localhost:8000/docs
 - **Async over sync** — predictions dispatch to Celery rather than running in the request cycle. The API stays responsive regardless of model complexity or load.
 - **ML as a service** — the model is trained offline, saved as an artifact, and loaded by the worker at task time. Swapping models requires no code changes to the API.
 - **Separation of concerns** — routes delegate to services, services operate on models, schemas define the API contract. No ORM leakage into route handlers.
+- **Public catalog, protected user actions** — player and stat reads stay public for product discoverability, while favorites, identity, and prediction jobs remain authenticated and abuse-resistant.
 - **Shared image, separate roles** — the API server and Celery worker use the same Docker image with different entrypoints, keeping the deployment surface small.
 
 ---
